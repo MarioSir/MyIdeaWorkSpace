@@ -12,6 +12,9 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.util.concurrent.TimeUnit;
 
+/**
+ * redis分布式锁的使用
+ */
 @RestController
 public class RedisController {
     private static final String productStockLockKey = "product:stock:lock:100";

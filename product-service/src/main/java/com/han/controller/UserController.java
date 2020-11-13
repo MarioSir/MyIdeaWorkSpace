@@ -21,6 +21,9 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
+/**
+ * redis布隆过滤器的使用
+ */
 @RestController
 public class UserController {
     private static final String USER_KEY = "user:";
