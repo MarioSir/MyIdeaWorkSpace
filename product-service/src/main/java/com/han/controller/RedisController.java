@@ -3,6 +3,7 @@ package com.han.controller;
 import com.han.lock.RedisLock;
 import org.redisson.Redisson;
 import org.redisson.api.RLock;
+import org.redisson.api.RReadWriteLock;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -139,6 +140,69 @@ public class RedisController {
             }
         } finally {
             redissonLock.unlock();
+        }
+        return "end";
+    }
+
+    /**
+     * 最佳加锁实现(基于redisson读写锁，读读不互斥（相当于无锁），读写互斥)
+     * 加锁第五种：使用redisson进行加锁key设置
+     * 使用lua脚本执行解决续命问题，能保证原子性
+     * 注意：不能执行任务时间太长或者死循环中使用
+     *
+     * @return
+     */
+    @RequestMapping("/readLock")
+    public String readLock() {
+        final RReadWriteLock readWriteLock = redisson.getReadWriteLock(productStockLockKey);
+        if (null == readWriteLock) {
+            return "哎哟喂，人太多，请稍后再试~~";
+        }
+        final RLock rLock = readWriteLock.readLock();
+        try {
+            //加锁，实现续命（默认时间30秒）
+            int productStock = Integer.parseInt(stringRedisTemplate.opsForValue().get(productStockKey));
+            if (productStock > 0) {
+                productStock = productStock - 1;
+                stringRedisTemplate.opsForValue().set(productStockKey, productStock + "");
+                logger.info("【{}】商品扣减库成功，当前可用库存为【{}】", productStockKey, productStock);
+            } else {
+                logger.error("【{}】商品扣减库存失败", productStockKey);
+            }
+        } finally {
+            rLock.unlock();
+        }
+        return "end";
+    }
+
+
+    /**
+     * 最佳加锁实现(基于redisson读写锁，读读不互斥（相当于无锁），读写互斥)
+     * 加锁第五种：使用redisson进行加锁key设置
+     * 使用lua脚本执行解决续命问题，能保证原子性
+     * 注意：不能执行任务时间太长或者死循环中使用
+     *
+     * @return
+     */
+    @RequestMapping("/writeLock")
+    public String writeLock() {
+        final RReadWriteLock readWriteLock = redisson.getReadWriteLock(productStockLockKey);
+        if (null == readWriteLock) {
+            return "哎哟喂，人太多，请稍后再试~~";
+        }
+        final RLock rLock = readWriteLock.writeLock();
+        try {
+            //加锁，实现续命（默认时间30秒）
+            int productStock = Integer.parseInt(stringRedisTemplate.opsForValue().get(productStockKey));
+            if (productStock > 0) {
+                productStock = productStock - 1;
+                stringRedisTemplate.opsForValue().set(productStockKey, productStock + "");
+                logger.info("【{}】商品扣减库成功，当前可用库存为【{}】", productStockKey, productStock);
+            } else {
+                logger.error("【{}】商品扣减库存失败", productStockKey);
+            }
+        } finally {
+            rLock.unlock();
         }
         return "end";
     }
